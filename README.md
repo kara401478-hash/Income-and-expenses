@@ -15,6 +15,4 @@
 - Vanilla JavaScript / HTML / CSS のみ(フレームワーク・ビルド不要)
 - ブラウザ内の状態管理のみ(保存機能なし・リロードで初期データに戻ります)
 
-## 公開方法(GitHub Pages)
 
-`index.html` をリポジトリ直下に置いた状態で GitHub Pages を有効化するだけで動作します。
