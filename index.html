@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>残高ダッシュボード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2530;
+    --paper:#ECEFE8;
+    --surface:#FFFFFF;
+    --line:#D7DBCF;
+    --line-strong:#B9BFAE;
+    --positive:#2F6F62;
+    --positive-bg:#E5EFEA;
+    --caution:#B5563C;
+    --caution-bg:#F5E7E1;
+    --muted:#6B7269;
+    --muted-2:#98A093;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:36px 20px 80px;
+  }
+  header.page{
+    margin-bottom:28px;
+  }
+  header.page h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:0.02em;
+    margin:0 0 6px;
+  }
+  header.page p{
+    margin:0;
+    color:var(--muted);
+    font-size:13.5px;
+  }
+
+  /* Hero */
+  .hero{
+    background:var(--ink);
+    color:#F2F3EE;
+    border-radius:4px;
+    padding:28px 28px 24px;
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:24px;
+    margin-bottom:22px;
+  }
+  @media (max-width:640px){
+    .hero{grid-template-columns:1fr;}
+  }
+  .hero-main .label{
+    font-size:12.5px;
+    color:#B7BDAF;
+    margin-bottom:6px;
+  }
+  .hero-main .amount{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:44px;
+    line-height:1.1;
+    letter-spacing:-0.01em;
+  }
+  .hero-main .amount.negative{ color:#E39C89; }
+  .hero-main .as-of{
+    margin-top:10px;
+    font-size:12.5px;
+    color:#9BA394;
+  }
+  .hero-side{
+    border-left:1px solid #38424D;
+    padding-left:24px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:14px;
+  }
+  @media (max-width:640px){
+    .hero-side{ border-left:none; border-top:1px solid #38424D; padding-left:0; padding-top:16px; }
+  }
+  .hero-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-size:13.5px;
+  }
+  .hero-row .k{ color:#B7BDAF; }
+  .hero-row .v{ font-family:'JetBrains Mono', monospace; font-weight:500; }
+  .balance-input{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid #4C5761;
+    color:#F2F3EE;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13.5px;
+    font-weight:500;
+    text-align:right;
+    width:110px;
+    padding:2px 0;
+  }
+  .balance-input:focus{ outline:none; border-bottom-color:#9BA394; }
+
+  /* Section titles */
+  .section-title{
+    font-size:14px;
+    font-weight:700;
+    margin:30px 0 12px;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .section-title .note{
+    font-weight:400;
+    font-size:12px;
+    color:var(--muted-2);
+  }
+
+  /* Cards */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:4px;
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+    background:#F7F8F3;
+  }
+  .card-head input.card-name{
+    font-weight:700;
+    font-size:15px;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    width:auto;
+    max-width:200px;
+  }
+  .card-head input.card-name:focus{ outline:none; text-decoration:underline; text-decoration-color:var(--line-strong); }
+  .card-head .card-total{
+    font-family:'JetBrains Mono', monospace;
+    font-size:14.5px;
+    font-weight:700;
+    color:var(--caution);
+  }
+  .card-head .card-total .lbl{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:400;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-right:6px;
+  }
+  .entry-row{
+    display:grid;
+    grid-template-columns:1fr 120px 90px 60px 32px;
+    gap:10px;
+    align-items:center;
+    padding:9px 18px;
+    border-bottom:1px solid #F0F1EC;
+    font-size:13.5px;
+  }
+  .entry-row:last-of-type{ border-bottom:none; }
+  .entry-row input{
+    border:1px solid transparent;
+    background:transparent;
+    font-family:inherit;
+    font-size:13.5px;
+    color:var(--ink);
+    padding:4px 6px;
+    border-radius:3px;
+    width:100%;
+  }
+  .entry-row input:hover{ border-color:var(--line); }
+  .entry-row input:focus{ outline:none; border-color:var(--line-strong); background:#fff; }
+  .entry-row input.amount, .entry-row input.day{
+    font-family:'JetBrains Mono', monospace;
+    text-align:right;
+  }
+  .status{
+    font-size:11px;
+    padding:3px 8px;
+    border-radius:20px;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .status.upcoming{ background:var(--caution-bg); color:var(--caution); }
+  .status.done{ background:#EEF0EA; color:var(--muted-2); }
+  .del-btn{
+    background:none;
+    border:none;
+    color:var(--muted-2);
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    padding:4px;
+  }
+  .del-btn:hover{ color:var(--caution); }
+  .card-foot{
+    padding:8px 18px 12px;
+  }
+  .add-entry-btn, .add-card-btn{
+    background:none;
+    border:1px dashed var(--line-strong);
+    color:var(--muted);
+    font-size:12.5px;
+    padding:7px 12px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .add-entry-btn:hover{ border-color:var(--positive); color:var(--positive); }
+  .add-card-btn{ padding:12px 18px; white-space:nowrap; }
+  .add-card-btn:hover{ border-color:var(--positive); color:var(--positive); }
+
+  .add-card-row{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+  }
+  .add-card-row select, .add-card-row input#customCardInput{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:3px;
+    background:var(--surface);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:13.5px;
+    padding:0 12px;
+  }
+  .add-card-row select:focus, .add-card-row input#customCardInput:focus{
+    outline:none;
+    border-color:var(--line-strong);
+  }
+
+  .col-headers{
+    display:grid;
+    grid-template-columns:1fr 120px 90px 60px 32px;
+    gap:10px;
+    padding:8px 18px 4px;
+    font-size:11px;
+    color:var(--muted-2);
+  }
+  .col-headers span:nth-child(2), .col-headers span:nth-child(3){ text-align:right; }
+  .col-headers span:nth-child(4){ text-align:center; }
+
+  footer.note{
+    margin-top:30px;
+    font-size:12px;
+    color:var(--muted-2);
+    border-top:1px solid var(--line);
+    padding-top:14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>残高ダッシュボード</h1>
+    <p>現在の残高から、今月まだ来ていないカード引き落としを差し引いて着地を確認します。</p>
+  </header>
+
+  <div class="hero">
+    <div class="hero-main">
+      <div class="label">着地予想残高(本日以降の引き落とし予定を差し引いた額)</div>
+      <div class="amount" id="projectedAmount">¥0</div>
+      <div class="as-of" id="asOf"></div>
+    </div>
+    <div class="hero-side">
+      <div class="hero-row">
+        <span class="k">現在の残高</span>
+        <input type="text" class="balance-input" id="balanceInput" inputmode="numeric">
+      </div>
+      <div class="hero-row">
+        <span class="k">今後の引き落とし予定合計</span>
+        <span class="v" id="futureTotal">¥0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">カードごとの引き落とし予定 <span class="note">日付を過ぎた項目は自動で「済」になります</span></div>
+
+  <div id="cardsContainer"></div>
+
+  <div class="add-card-row">
+    <select id="presetCardSelect">
+      <option value="">カード/項目を選んで追加...</option>
+    </select>
+    <input type="text" id="customCardInput" placeholder="カード名を入力" style="display:none;">
+    <button class="add-card-btn" id="addCardBtn">+ 追加</button>
+  </div>
+
+  <footer class="note">
+    ブラウザを閉じるとデータはリセットされます(このデモは保存機能なしのプロトタイプです)。元シートでは合計欄が一部のカードしか足していない箇所がありましたが、ここでは全カードの予定額を正しく合算しています。
+  </footer>
+
+</div>
+
+<script>
+  const fmt = n => (n < 0 ? '-¥' : '¥') + Math.abs(Math.round(n)).toLocaleString('ja-JP');
+
+  let state = {
+    balance: 127516,
+    cards: [
+      {
+        id: 'c1',
+        name: '固定費',
+        entries: [
+          { id: 'e1', name: '家賃',        amount: 70330, day: 27 },
+          { id: 'e2', name: '美容',        amount: 9300,  day: 27 },
+          { id: 'e3', name: 'みずほカードローン', amount: 10000, day: 10 },
+          { id: 'e4', name: '県民共済',      amount: 2500,  day: 15 },
+          { id: 'e5', name: '株',          amount: 5000,  day: 26 },
+        ]
+      },
+      {
+        id: 'c2',
+        name: 'クレカ',
+        entries: [
+          { id: 'e6', name: 'ra', amount: 0,     day: 27 },
+          { id: 'e7', name: 'o',  amount: 12256, day: 27 },
+          { id: 'e8', name: 'V',  amount: 5000,  day: 28 },
+        ]
+      }
+    ]
+  };
+
+  let idCounter = 100;
+  const newId = prefix => prefix + (idCounter++);
+
+  const PRESET_CARDS = [
+    'オリコカード',
+    '楽天カード',
+    'アメリカンエキスプレス',
+    'ENEOSカード',
+    '三井住友カード',
+    'イオンカード',
+    'JCBカード',
+    '家賃',
+    'その他(自由入力)'
+  ];
+
+  const today = new Date();
+  const todayDay = today.getDate();
+
+  function isUpcoming(day){
+    return day > todayDay;
+  }
+
+  function cardFutureTotal(card){
+    return card.entries.reduce((sum, e) => sum + (isUpcoming(e.day) ? e.amount : 0), 0);
+  }
+
+  function populatePresetSelect(){
+    const select = document.getElementById('presetCardSelect');
+    if (select.dataset.filled) return;
+    PRESET_CARDS.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name === 'その他(自由入力)' ? 'custom' : name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    select.dataset.filled = '1';
+  }
+
+  function render(){
+    populatePresetSelect();
+    document.getElementById('balanceInput').value = state.balance.toLocaleString('ja-JP');
+    document.getElementById('asOf').textContent =
+      today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日 時点';
+
+    const totalFuture = state.cards.reduce((s, c) => s + cardFutureTotal(c), 0);
+    const projected = state.balance - totalFuture;
+
+    document.getElementById('futureTotal').textContent = fmt(totalFuture);
+    const amountEl = document.getElementById('projectedAmount');
+    amountEl.textContent = fmt(projected);
+    amountEl.classList.toggle('negative', projected < 0);
+
+    const container = document.getElementById('cardsContainer');
+    container.innerHTML = '';
+
+    state.cards.forEach(card => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card';
+
+      const total = cardFutureTotal(card);
+
+      cardEl.innerHTML = `
+        <div class="card-head">
+          <input class="card-name" data-card="${card.id}" value="${card.name}">
+          <div class="card-total"><span class="lbl">今後の予定</span>${fmt(total)}</div>
+        </div>
+        <div class="col-headers">
+          <span>項目名</span><span>金額</span><span>引落日</span><span>状態</span><span></span>
+        </div>
+      `;
+
+      card.entries.forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+        const upcoming = isUpcoming(entry.day);
+        row.innerHTML = `
+          <input type="text" value="${entry.name}" data-card="${card.id}" data-entry="${entry.id}" data-field="name">
+          <input type="text" class="amount" value="${entry.amount}" data-card="${card.id}" data-entry="${entry.id}" data-field="amount" inputmode="numeric">
+          <input type="text" class="day" value="${entry.day}" data-card="${card.id}" data-entry="${entry.id}" data-field="day" inputmode="numeric" maxlength="2">
+          <span class="status ${upcoming ? 'upcoming' : 'done'}">${upcoming ? '予定' : '済'}</span>
+          <button class="del-btn" data-card="${card.id}" data-entry="${entry.id}" title="削除">×</button>
+        `;
+        cardEl.appendChild(row);
+      });
+
+      const foot = document.createElement('div');
+      foot.className = 'card-foot';
+      foot.innerHTML = `<button class="add-entry-btn" data-card="${card.id}">+ 項目を追加</button>`;
+      cardEl.appendChild(foot);
+
+      container.appendChild(cardEl);
+    });
+
+    attachEvents();
+  }
+
+  function attachEvents(){
+    document.getElementById('balanceInput').onchange = e => {
+      const v = parseInt(e.target.value.replace(/[^0-9-]/g, ''), 10);
+      state.balance = isNaN(v) ? 0 : v;
+      render();
+    };
+
+    document.querySelectorAll('.card-name').forEach(el => {
+      el.onchange = e => {
+        const card = state.cards.find(c => c.id === e.target.dataset.card);
+        card.name = e.target.value;
+        render();
+      };
+    });
+
+    document.querySelectorAll('.entry-row input').forEach(el => {
+      el.onchange = e => {
+        const card = state.cards.find(c => c.id === e.target.dataset.card);
+        const entry = card.entries.find(en => en.id === e.target.dataset.entry);
+        const field = e.target.dataset.field;
+        if (field === 'amount'){
+          const v = parseInt(e.target.value.replace(/[^0-9-]/g, ''), 10);
+          entry.amount = isNaN(v) ? 0 : v;
+        } else if (field === 'day'){
+          let v = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+          if (isNaN(v)) v = 1;
+          v = Math.min(31, Math.max(1, v));
+          entry.day = v;
+        } else {
+          entry.name = e.target.value;
+        }
+        render();
+      };
+    });
+
+    document.querySelectorAll('.del-btn').forEach(el => {
+      el.onclick = e => {
+        const card = state.cards.find(c => c.id === e.target.dataset.card);
+        card.entries = card.entries.filter(en => en.id !== e.target.dataset.entry);
+        render();
+      };
+    });
+
+    document.querySelectorAll('.add-entry-btn').forEach(el => {
+      el.onclick = e => {
+        const card = state.cards.find(c => c.id === e.target.dataset.card);
+        card.entries.push({ id: newId('e'), name: '新規項目', amount: 0, day: todayDay + 1 > 31 ? 31 : todayDay + 1 });
+        render();
+      };
+    });
+
+    const presetSelect = document.getElementById('presetCardSelect');
+    const customInput = document.getElementById('customCardInput');
+
+    presetSelect.onchange = () => {
+      customInput.style.display = presetSelect.value === 'custom' ? 'block' : 'none';
+      if (presetSelect.value === 'custom') customInput.focus();
+    };
+
+    document.getElementById('addCardBtn').onclick = () => {
+      let name;
+      if (presetSelect.value === 'custom'){
+        name = customInput.value.trim();
+        if (!name) { customInput.focus(); return; }
+      } else if (presetSelect.value){
+        name = presetSelect.value;
+      } else {
+        return; // nothing selected
+      }
+      state.cards.push({ id: newId('c'), name, entries: [] });
+      presetSelect.value = '';
+      customInput.value = '';
+      customInput.style.display = 'none';
+      render();
+    };
+  }
+
+  render();
+</script>
+</body>
+</html>
