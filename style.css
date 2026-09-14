@@ -227,7 +227,7 @@ header.page p{
   gap:10px;
   margin-top:4px;
 }
-.add-card-row select, .add-card-row input#customCardInput{
+.add-card-row input{
   flex:1;
   border:1px solid var(--line);
   border-radius:3px;
@@ -237,9 +237,32 @@ header.page p{
   font-size:13.5px;
   padding:0 12px;
 }
-.add-card-row select:focus, .add-card-row input#customCardInput:focus{
+.add-card-row input:focus{
   outline:none;
   border-color:var(--line-strong);
+}
+
+.add-item-row{
+  display:flex;
+  gap:8px;
+}
+.add-item-row select, .add-item-row input.item-custom-input{
+  flex:1;
+  border:1px solid var(--line);
+  border-radius:3px;
+  background:var(--surface);
+  color:var(--ink);
+  font-family:inherit;
+  font-size:12.5px;
+  padding:0 10px;
+  height:32px;
+}
+.add-item-row select:focus, .add-item-row input.item-custom-input:focus{
+  outline:none;
+  border-color:var(--line-strong);
+}
+.add-item-row .add-entry-btn{
+  white-space:nowrap;
 }
 
 .col-headers{

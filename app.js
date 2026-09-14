@@ -6,6 +6,7 @@ let state = {
     {
       id: 'c1',
       name: '固定費',
+      itemPresets: ['家賃', 'その他(自由入力)'],
       entries: [
         { id: 'e1', name: '家賃',        amount: 70330, day: 27 },
         { id: 'e2', name: '美容',        amount: 9300,  day: 27 },
@@ -17,6 +18,16 @@ let state = {
     {
       id: 'c2',
       name: 'クレカ',
+      itemPresets: [
+        'オリコカード',
+        '楽天カード',
+        'アメリカンエキスプレス',
+        'ENEOSカード',
+        '三井住友カード',
+        'イオンカード',
+        'JCBカード',
+        'その他(自由入力)'
+      ],
       entries: [
         { id: 'e6', name: 'ra', amount: 0,     day: 27 },
         { id: 'e7', name: 'o',  amount: 12256, day: 27 },
@@ -29,18 +40,6 @@ let state = {
 let idCounter = 100;
 const newId = prefix => prefix + (idCounter++);
 
-const PRESET_CARDS = [
-  'オリコカード',
-  '楽天カード',
-  'アメリカンエキスプレス',
-  'ENEOSカード',
-  '三井住友カード',
-  'イオンカード',
-  'JCBカード',
-  '家賃',
-  'その他(自由入力)'
-];
-
 const today = new Date();
 const todayDay = today.getDate();
 
@@ -52,20 +51,7 @@ function cardFutureTotal(card){
   return card.entries.reduce((sum, e) => sum + (isUpcoming(e.day) ? e.amount : 0), 0);
 }
 
-function populatePresetSelect(){
-  const select = document.getElementById('presetCardSelect');
-  if (select.dataset.filled) return;
-  PRESET_CARDS.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name === 'その他(自由入力)' ? 'custom' : name;
-    opt.textContent = name;
-    select.appendChild(opt);
-  });
-  select.dataset.filled = '1';
-}
-
 function render(){
-  populatePresetSelect();
   document.getElementById('balanceInput').value = state.balance.toLocaleString('ja-JP');
   document.getElementById('asOf').textContent =
     today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日 時点';
@@ -113,7 +99,23 @@ function render(){
 
     const foot = document.createElement('div');
     foot.className = 'card-foot';
-    foot.innerHTML = `<button class="add-entry-btn" data-card="${card.id}">+ 項目を追加</button>`;
+
+    if (card.itemPresets && card.itemPresets.length){
+      foot.innerHTML = `
+        <div class="add-item-row">
+          <select class="item-preset-select" data-card="${card.id}">
+            <option value="">項目を選んで追加...</option>
+            ${card.itemPresets.map(name =>
+              `<option value="${name === 'その他(自由入力)' ? 'custom' : name}">${name}</option>`
+            ).join('')}
+          </select>
+          <input type="text" class="item-custom-input" data-card="${card.id}" placeholder="項目名を入力" style="display:none;">
+          <button class="add-entry-btn" data-card="${card.id}">+ 追加</button>
+        </div>
+      `;
+    } else {
+      foot.innerHTML = `<button class="add-entry-btn" data-card="${card.id}" data-blank="1">+ 項目を追加</button>`;
+    }
     cardEl.appendChild(foot);
 
     container.appendChild(cardEl);
@@ -165,36 +167,52 @@ function attachEvents(){
     };
   });
 
+  // Preset item selects (per-card): toggle custom text input
+  document.querySelectorAll('.item-preset-select').forEach(el => {
+    el.onchange = e => {
+      const cardId = e.target.dataset.card;
+      const customInput = document.querySelector(`.item-custom-input[data-card="${cardId}"]`);
+      customInput.style.display = e.target.value === 'custom' ? 'block' : 'none';
+      if (e.target.value === 'custom') customInput.focus();
+    };
+  });
+
+  // Add-entry buttons: either preset-based (with select) or blank
   document.querySelectorAll('.add-entry-btn').forEach(el => {
     el.onclick = e => {
-      const card = state.cards.find(c => c.id === e.target.dataset.card);
-      card.entries.push({ id: newId('e'), name: '新規項目', amount: 0, day: todayDay + 1 > 31 ? 31 : todayDay + 1 });
+      const cardId = e.target.dataset.card;
+      const card = state.cards.find(c => c.id === cardId);
+
+      if (e.target.dataset.blank){
+        card.entries.push({ id: newId('e'), name: '新規項目', amount: 0, day: todayDay + 1 > 31 ? 31 : todayDay + 1 });
+        render();
+        return;
+      }
+
+      const select = document.querySelector(`.item-preset-select[data-card="${cardId}"]`);
+      const customInput = document.querySelector(`.item-custom-input[data-card="${cardId}"]`);
+
+      let name;
+      if (select.value === 'custom'){
+        name = customInput.value.trim();
+        if (!name) { customInput.focus(); return; }
+      } else if (select.value){
+        name = select.value;
+      } else {
+        return; // nothing selected
+      }
+
+      card.entries.push({ id: newId('e'), name, amount: 0, day: todayDay + 1 > 31 ? 31 : todayDay + 1 });
       render();
     };
   });
 
-  const presetSelect = document.getElementById('presetCardSelect');
-  const customInput = document.getElementById('customCardInput');
-
-  presetSelect.onchange = () => {
-    customInput.style.display = presetSelect.value === 'custom' ? 'block' : 'none';
-    if (presetSelect.value === 'custom') customInput.focus();
-  };
-
   document.getElementById('addCardBtn').onclick = () => {
-    let name;
-    if (presetSelect.value === 'custom'){
-      name = customInput.value.trim();
-      if (!name) { customInput.focus(); return; }
-    } else if (presetSelect.value){
-      name = presetSelect.value;
-    } else {
-      return; // nothing selected
-    }
+    const input = document.getElementById('newCardNameInput');
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
     state.cards.push({ id: newId('c'), name, entries: [] });
-    presetSelect.value = '';
-    customInput.value = '';
-    customInput.style.display = 'none';
+    input.value = '';
     render();
   };
 }
