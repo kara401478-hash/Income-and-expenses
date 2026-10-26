@@ -1,43 +1,83 @@
 const fmt = n => (n < 0 ? '-¥' : '¥') + Math.abs(Math.round(n)).toLocaleString('ja-JP');
 
-let state = {
-  balance: 127516,
-  cards: [
-    {
-      id: 'c1',
-      name: '固定費',
-      itemPresets: ['家賃', 'その他(自由入力)'],
-      entries: [
-        { id: 'e1', name: '家賃',        amount: 70330, day: 27 },
-        { id: 'e2', name: '美容',        amount: 9300,  day: 27 },
-        { id: 'e3', name: 'みずほカードローン', amount: 10000, day: 10 },
-        { id: 'e4', name: '県民共済',      amount: 2500,  day: 15 },
-        { id: 'e5', name: '株',          amount: 5000,  day: 26 },
-      ]
-    },
-    {
-      id: 'c2',
-      name: 'クレカ',
-      itemPresets: [
-        'オリコカード',
-        '楽天カード',
-        'アメリカンエキスプレス',
-        'ENEOSカード',
-        '三井住友カード',
-        'イオンカード',
-        'JCBカード',
-        'その他(自由入力)'
-      ],
-      entries: [
-        { id: 'e6', name: 'ra', amount: 0,     day: 27 },
-        { id: 'e7', name: 'o',  amount: 12256, day: 27 },
-        { id: 'e8', name: 'V',  amount: 5000,  day: 28 },
-      ]
-    }
-  ]
-};
+// ===== 保存まわり =====
+const STORAGE_KEY = 'zandaka-dashboard-v1';
 
-let idCounter = 100;
+function defaultState(){
+  return {
+    balance: 127516,
+    cards: [
+      {
+        id: 'c1',
+        name: '固定費',
+        itemPresets: ['家賃', 'その他(自由入力)'],
+        entries: [
+          { id: 'e1', name: '家賃',        amount: 70330, day: 27 },
+          { id: 'e2', name: '美容',        amount: 9300,  day: 27 },
+          { id: 'e3', name: 'みずほカードローン', amount: 10000, day: 10 },
+          { id: 'e4', name: '県民共済',      amount: 2500,  day: 15 },
+          { id: 'e5', name: '株',          amount: 5000,  day: 26 },
+        ]
+      },
+      {
+        id: 'c2',
+        name: 'クレカ',
+        itemPresets: [
+          'オリコカード',
+          '楽天カード',
+          'アメリカンエキスプレス',
+          'ENEOSカード',
+          '三井住友カード',
+          'イオンカード',
+          'JCBカード',
+          'その他(自由入力)'
+        ],
+        entries: [
+          { id: 'e6', name: 'ra', amount: 0,     day: 27 },
+          { id: 'e7', name: 'o',  amount: 12256, day: 27 },
+          { id: 'e8', name: 'V',  amount: 5000,  day: 28 },
+        ]
+      }
+    ]
+  };
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data.balance !== 'number' || !Array.isArray(data.cards)) return null;
+    return data;
+  } catch (e) {
+    return null; // 壊れたデータ・保存不可の環境では初期データを使う
+  }
+}
+
+function saveState(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    // 保存できない環境(プライベートモード等)でも画面は動かす
+  }
+}
+
+// 保存データ内の最大ID番号の次から採番(リロード後のID重複を防ぐ)
+function nextIdCounter(s){
+  let max = 99;
+  const scan = id => {
+    const m = /(\d+)$/.exec(String(id));
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  };
+  s.cards.forEach(c => {
+    scan(c.id);
+    (c.entries || []).forEach(e => scan(e.id));
+  });
+  return max + 1;
+}
+
+let state = loadState() || defaultState();
+let idCounter = nextIdCounter(state);
 const newId = prefix => prefix + (idCounter++);
 
 const today = new Date();
@@ -52,6 +92,8 @@ function cardFutureTotal(card){
 }
 
 function render(){
+  saveState();
+
   document.getElementById('balanceInput').value = state.balance.toLocaleString('ja-JP');
   document.getElementById('asOf').textContent =
     today.getFullYear() + '年' + (today.getMonth()+1) + '月' + today.getDate() + '日 時点';
@@ -217,4 +259,24 @@ function attachEvents(){
   };
 }
 
+// 「初期データに戻す」ボタン(index.htmlを変更しなくて済むようJSで1回だけ追加)
+function setupResetButton(){
+  if (document.getElementById('resetBtn')) return;
+  const container = document.getElementById('cardsContainer');
+  const btn = document.createElement('button');
+  btn.id = 'resetBtn';
+  btn.type = 'button';
+  btn.textContent = '初期データに戻す';
+  btn.style.cssText = 'display:block;margin:24px auto 8px;padding:8px 16px;font-size:13px;cursor:pointer;';
+  btn.onclick = () => {
+    if (!confirm('保存したデータを消して、初期データに戻します。よろしいですか?')) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    state = defaultState();
+    idCounter = nextIdCounter(state);
+    render();
+  };
+  container.insertAdjacentElement('afterend', btn);
+}
+
+setupResetButton();
 render();
