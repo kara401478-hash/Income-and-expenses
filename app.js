@@ -2,21 +2,23 @@ const fmt = n => (n < 0 ? '-¥' : '¥') + Math.abs(Math.round(n)).toLocaleString
 
 // ===== 保存まわり =====
 const STORAGE_KEY = 'zandaka-dashboard-v1';
+const NISA_NAME = '確定拠出掛金(NISA)';
 
 function defaultState(){
   return {
+    v: 2,
     balance: 127516,
     cards: [
       {
         id: 'c1',
         name: '固定費',
-        itemPresets: ['家賃', 'その他(自由入力)'],
+        itemPresets: ['家賃', NISA_NAME, 'その他(自由入力)'],
         entries: [
           { id: 'e1', name: '家賃',        amount: 70330, day: 27 },
           { id: 'e2', name: '美容',        amount: 9300,  day: 27 },
           { id: 'e3', name: 'みずほカードローン', amount: 10000, day: 10 },
           { id: 'e4', name: '県民共済',      amount: 2500,  day: 15 },
-          { id: 'e5', name: '株',          amount: 5000,  day: 26 },
+          { id: 'e5', name: NISA_NAME,   amount: 5000,  day: 26 },
         ]
       },
       {
@@ -48,10 +50,42 @@ function loadState(){
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (!data || typeof data.balance !== 'number' || !Array.isArray(data.cards)) return null;
-    return data;
+    return migrate(data);
   } catch (e) {
     return null; // 壊れたデータ・保存不可の環境では初期データを使う
   }
+}
+
+// 保存済みデータを新しい内容に合わせる(v2: 株 → 確定拠出掛金(NISA)、プリセット追加)
+function migrate(data){
+  if ((data.v || 1) >= 2) return data;
+
+  const fixed = data.cards.find(c => c.id === 'c1');
+  if (fixed){
+    // プリセットに追加(「その他」の手前)
+    if (!Array.isArray(fixed.itemPresets)) fixed.itemPresets = [];
+    if (!fixed.itemPresets.includes(NISA_NAME)){
+      const i = fixed.itemPresets.indexOf('その他(自由入力)');
+      if (i >= 0) fixed.itemPresets.splice(i, 0, NISA_NAME);
+      else fixed.itemPresets.push(NISA_NAME);
+    }
+
+    // 「株」を確定拠出掛金(NISA)に置き換え。どちらも無ければ追加
+    const stock = fixed.entries.find(e => e.name === '株');
+    const hasNisa = fixed.entries.some(e => e.name.includes('確定拠出'));
+    if (stock && !hasNisa){
+      stock.name = NISA_NAME;
+      stock.amount = 5000;
+      stock.day = 26;
+    } else if (stock && hasNisa){
+      fixed.entries = fixed.entries.filter(e => e !== stock);
+    } else if (!stock && !hasNisa){
+      fixed.entries.push({ id: 'e' + nextIdCounter(data), name: NISA_NAME, amount: 5000, day: 26 });
+    }
+  }
+
+  data.v = 2;
+  return data;
 }
 
 function saveState(){
